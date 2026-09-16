@@ -15,7 +15,8 @@ rpm     负责“安装和管理包”
 rpmbuild 负责“制作包”
 ```
 
-## 2. 先建立正确认知：RPM 包里到底装的是什么
+## 2. RPM 打包
+### 2.1 rpm 包包含哪些东西？
 一个 RPM 包通常包含：
 
 + 可执行文件，如 `/usr/bin/*`
@@ -24,11 +25,29 @@ rpmbuild 负责“制作包”
 + 文档、license、man 手册
 + 安装/升级/卸载脚本
 + 依赖关系、架构信息、校验信息等元数据
++ 源码 rpm 包包含源码
 
 最终**哪些文件会进 RPM 包，不是看你复制了什么，而是看 **`%files`** 里声明了什么**。
 
 + 在 `%install` 里放进 `%{buildroot}`，但没写到 `%files`：不会被打进包
 + 写到了 `%files`，但实际文件不存在：打包会失败
+
+### 2.2 rpm 包打包流程
+<font style="color:rgb(15, 17, 21);">写 </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">foo.spec</font>`<font style="color:rgb(15, 17, 21);"> → 源码放入 </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">SOURCES/</font>`<font style="color:rgb(15, 17, 21);"> → 执行 </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpmbuild -ba foo.spec</font>`<font style="color:rgb(15, 17, 21);"> → 得到 </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">foo-1.0-1.src.rpm</font>`<font style="color:rgb(15, 17, 21);"> 和 </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">foo-1.0-1.x86_64.rpm</font>`
+
+### 2.3 rpm 包分类
+| 分类 | 名称 | 内容与用途 |
+| --- | --- | --- |
+| 源码包 | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-<version>-<release>.src.rpm</font> | <font style="color:rgb(15, 17, 21);">含源码、补丁、spec 文件，用于编译生成二进制 RPM</font> |
+| 主包 | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">软件运行时必需的核心可执行文件、配置和基础库</font> |
+| 开发包 | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-devel-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">头文件、静态库、pkgconfig，用于编译依赖此软件的程序</font> |
+| <font style="color:rgb(15, 17, 21);">调试包</font> | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-debuginfo-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">调试符号表，用于 gdb 调试、崩溃分析</font> |
+| <font style="color:rgb(15, 17, 21);">文档包</font> | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-doc-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">说明文档、手册、示例</font> |
+| <font style="color:rgb(15, 17, 21);">库包</font> | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-libs-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">共享库.so ,供多个程序使用</font> |
+| <font style="color:rgb(15, 17, 21);">静态库包</font> | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-static-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">静态库.a，用于静态链接</font> |
+| <font style="color:rgb(15, 17, 21);">工具包</font> | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-tools-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">辅助命令行工具或脚本</font> |
+| <font style="color:rgb(15, 17, 21);">内核模块包</font> | <font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">package-name-kmod-<version>-<release>.<arch>.rpm</font> | <font style="color:rgb(15, 17, 21);">内核模块，需要与内核版本匹配</font> |
+
 
 ## 3. rpm 与 dnf/yum 的关系
 ```latex
@@ -45,6 +64,23 @@ rpm            ← 执行本地包安装、查询、卸载
 + **安装本地包做测试**：`rpm -ivh` 或 `dnf install ./xxx.rpm`
 + **正式部署，且希望自动补依赖**：优先 `dnf install`
 + **查看包内容、脚本、元数据**：用 `rpm -q*` 系列命令
+
+### <font style="color:rgb(15, 17, 21);">rpm 与 dnf 的区别</font>
+| <font style="color:rgb(15, 17, 21);">对比项</font> | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm</font>` | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf</font>` |
+| --- | --- | --- |
+| <font style="color:rgb(15, 17, 21);">依赖处理</font> | **<font style="color:rgb(15, 17, 21);">不自动解决依赖</font>**<font style="color:rgb(15, 17, 21);">，缺依赖直接报错</font> | **<font style="color:rgb(15, 17, 21);">自动解决依赖</font>**<font style="color:rgb(15, 17, 21);">，从仓库下载安装</font> |
+| <font style="color:rgb(15, 17, 21);">仓库支持</font> | <font style="color:rgb(15, 17, 21);">不支持仓库</font> | <font style="color:rgb(15, 17, 21);">支持仓库，可从网络安装</font> |
+| <font style="color:rgb(15, 17, 21);">安装本地包</font> | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm -ivh xxx.rpm</font>` | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf install xxx.rpm</font>` |
+| <font style="color:rgb(15, 17, 21);">卸载</font> | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm -e 包名</font>` | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf remove 包名</font>` |
+| <font style="color:rgb(15, 17, 21);">查询</font> | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm -q</font>`<br/><font style="color:rgb(15, 17, 21);">、</font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm -ql</font>` | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf info</font>`<br/><font style="color:rgb(15, 17, 21);">、</font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf list</font>` |
+| <font style="color:rgb(15, 17, 21);">升级</font> | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm -Uvh</font>` | `<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf upgrade</font>` |
+| <font style="color:rgb(15, 17, 21);">底层关系</font> | <font style="color:rgb(15, 17, 21);">底层工具</font> | <font style="color:rgb(15, 17, 21);">上层工具，最终调用 rpm 完成安装</font> |
+
+
++ `**<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">rpm</font>**`<font style="color:rgb(15, 17, 21);">：底层工具，只管装/卸/查，</font>**<font style="color:rgb(15, 17, 21);">不管依赖</font>**<font style="color:rgb(15, 17, 21);">。</font>
++ `**<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">dnf</font>**`<font style="color:rgb(15, 17, 21);">：上层工具，</font>**<font style="color:rgb(15, 17, 21);">自动处理依赖</font>**<font style="color:rgb(15, 17, 21);">，优先用它。</font>
++ **<font style="color:rgb(15, 17, 21);">二进制 RPM</font>**<font style="color:rgb(15, 17, 21);">：可直接装。</font>
++ **<font style="color:rgb(15, 17, 21);">源码 RPM（.src.rpm）</font>**<font style="color:rgb(15, 17, 21);">：不能直接装，只能用来重建二进制包。</font>
 
 ## 4. 安装打包工具
 在 RPM 系发行版上安装：
@@ -223,6 +259,18 @@ rpmbuild 一般遵循下面这条主线：
 + `-q`：安静模式
 + `-n`：指定解压后的顶层目录名
 
+`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">%setup -q</font>`<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">默认做两件事：</font>
+
+1. <font style="color:rgb(15, 17, 21);">解压</font><font style="color:rgb(15, 17, 21);"> </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">Source0</font>`<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">指定的那个压缩包到</font><font style="color:rgb(15, 17, 21);"> </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">BUILD/</font>`<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">目录。</font>
+2. <font style="color:rgb(15, 17, 21);">解压后，自动</font><font style="color:rgb(15, 17, 21);"> </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">cd</font>`<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">进入</font><font style="color:rgb(15, 17, 21);"> </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">%{name}-%{version}</font>`<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">目录。</font>
+
+<font style="color:rgb(15, 17, 21);">所以：</font>
+
++ **<font style="color:rgb(15, 17, 21);">压缩包名</font>**<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">← 由</font><font style="color:rgb(15, 17, 21);"> </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">Source0</font>`<font style="color:rgb(15, 17, 21);"> </font><font style="color:rgb(15, 17, 21);">决定。</font>
++ **<font style="color:rgb(15, 17, 21);">解压后进入的目录名</font>**<font style="color:rgb(15, 17, 21);"> ← 默认由 </font>`<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">%{name}-%{version}</font>`<font style="color:rgb(15, 17, 21);"> 决定。</font>
+
+<font style="color:rgb(15, 17, 21);">如果解压后压缩包的顶层目录名称和 %{name}-%{version}  不一致，则可以通过指定 -n 参数来指定解压后的顶层目录名称。</font>
+
 ### 10.2 `%build`
 如果需要编译，就在这里执行编译命令：
 
@@ -306,7 +354,11 @@ echo 'Hello from kernel!' > hello-kernel-1.0/message
 
 ### 12.2 制作源码包
 ```bash
-tar -czf ~/rpmbuild/SOURCES/hello-kernel-1.0.tar.gz -C ~ hello-kernel-1.0
+# 制作压缩包
+tar -czf ~/rpmbuild/SOURCES/hello-kernel-1.0.tar.gz -C ~/hello-kernel-1.0 .  
+
+# 查看压缩包的内容
+tar -tzf hello-kernel-1.0.tar.gz
 ```
 
 注意这里的压缩包名和顶层目录名要匹配：
@@ -384,9 +436,9 @@ rpmbuild -ba your-package.spec
 
 ### 13.4 查看已安装包信息
 ```bash
-rpm -qi your-package-name
-rpm -ql your-package-name
-rpm -q --scripts your-package-name
+rpm -qi your-package-name  //  查看软件包的元数据信息，描述信息
+rpm -ql your-package-name   // 查询软件包中所有安装到系统上的文件的路径
+  rpm -q --scripts your-package-name  // 查看这个 RPM 包在安装、升级、卸载时执行的脚本
 ```
 
 ### 13.5 查询某个文件属于哪个包
@@ -398,6 +450,13 @@ rpm -qf /path/to/file
 ```bash
 rpm -qpl your-package.rpm
 rpm -qpi your-package.rpm
+
+/**
+-q	query	进入查询模式
+-p	package file	指定操作对象是 .rpm 文件，而不是已安装的包名
+-l	list	列出包内包含的文件
+-i	info	显示包的详细信息
+*/
 ```
 
 ## 14. 常用宏
@@ -637,13 +696,6 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 * Sun May 25 2026 Your Name <you@example.com> - 1.0-1
 - Initial package
 ```
-
-### 这个版本相比原文修正了什么
-1. 去掉了把日志文件直接塞进 `%files` 的做法
-2. 对 systemd 脚本依赖加了更清晰的 `Requires(post/preun/postun)`
-3. 使用 `%{_bindir}`、`%{_unitdir}` 代替硬编码路径
-4. 在 `%install` 前显式 `rm -rf %{buildroot}`，避免脏目录残留
-5. 将停止/禁用服务放进 `%preun`，把 `daemon-reload` 放进 `%postun`，更符合常见实践
 
 ## 22. 制作标准源码包
 源码包必须满足两个要求：
